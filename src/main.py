@@ -15,6 +15,7 @@ def transport_price_prediction(
     weight: float = 0,
     shipping_method: str = "",
     model: str = "gpt-5.2", # "gpt-5.2" does not exist; using o1 for reasoning
+    reasoning_effort: str = "high", # Added reasoning_effort as a parameter
     dimensions: str = None
 ) -> str:
     """
@@ -22,32 +23,34 @@ def transport_price_prediction(
     """
 
     # Optional: reasoning_effort is supported by specific o-series models
-    reasoning_effort = "medium" 
+    reasoning_effort = reasoning_effort
 
     prompt = f"""
+
 ### ROLE
-You are an elite International Logistics Consultant and Freight Forwarding Expert. 
+You are an elite International Logistics Consultant with 2026 market knowledge.
 
 ### TASK
-Calculate a realistic, market-accurate shipping price range based on the provided shipment metadata. 
+Provide a realistic shipping price range (USD) based on input data. Include both premium express and budget options when applicable.
 
 ### INPUT DATA
 - Origin: {initial_destination}
 - Destination: {final_destination}
 - Weight: {weight} kg
-- Shipping Method: {shipping_method}
+- Method: {shipping_method}
 - Dimensions: {dimensions}
 
-### CONSTRAINTS & REQUIREMENTS
-1. MARKET DATA: Base the estimate on current 2026 global shipping indexes.
-2. DIMENSIONS: If dimensions are not provided, assume a standard volumetric weight ratio.
-3. SURCHARGES: Factor in estimated fuel surcharges and baseline international handling fees.
-4. FORMATTING: You must output ONLY the price range. Do not include currency symbols other than '$'. 
-5. PRICE RANGE: Provide a realistic low and high estimate based on the above factors.
-6. PRICE SUGGESTION: For air take reference from FedEx/UPS/DHL, for sea take reference from Drewry/Xeneta.
+### KEY RULES
+- For 'Air': 
+  - Premium express (FedEx/UPS/DHL door-to-door, fast 2-5 days): higher rates
+  - Budget consolidated air freight (airport-to-airport via forwarders): lower rates
+- Calculate chargeable weight if dimensions given: max(actual kg, (L×W×H cm)/5000–6000)
+- Factor 2026 fuel surcharges (~20-35%), handling fees, market indexes.
+- If sea: reference Drewry/Xeneta.
+- Output ONLY the range — no extra text. Let the range be between lower price and lower price + less then 100 USD
 
-### OUTPUT STRUCTURE
-$[Low Estimate]-$[High Estimate] (e.g., $Low Estimate-$High Estimate)
+### OUTPUT
+$[Low Estimate (budget)] - $[High Estimate (premium)] 
 
 Recommended price range:"""
 
@@ -74,9 +77,9 @@ Recommended price range:"""
 
 if __name__ == "__main__":
     # Matches your provided inputs
-    initial_destination = "Singapore"
-    final_destination = "USA"
-    weight = 10
+    initial_destination = "Dhaka"
+    final_destination = "London"
+    weight = 60
     shipping_method = "Air"
     dimensions = "50x40x30 cm"  # Optional, not used in current prompt but can be added to the prompt if needed
 
