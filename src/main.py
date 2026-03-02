@@ -26,12 +26,11 @@ def transport_price_prediction(
     reasoning_effort = reasoning_effort
 
     prompt = f"""
-
 ### ROLE
 You are an elite International Logistics Consultant with 2026 market knowledge.
 
 ### TASK
-Provide a realistic shipping price range (USD) based on input data. Include both premium express and budget options when applicable.
+Provide a realistic USD shipping price range (narrow: low budget to low + < $100) and estimated delivery days based on input.
 
 ### INPUT DATA
 - Origin: {initial_destination}
@@ -41,30 +40,43 @@ Provide a realistic shipping price range (USD) based on input data. Include both
 - Dimensions: {dimensions}
 
 ### KEY RULES
-- For 'Air': 
-  - Premium express (FedEx/UPS/DHL door-to-door, fast 2-5 days): higher rates
-  - Budget consolidated air freight (airport-to-airport via forwarders): lower rates
-- Calculate chargeable weight if dimensions given: max(actual kg, (L×W×H cm)/5000–6000)
-- Factor 2026 fuel surcharges (~20-35%), handling fees, market indexes.
-- If sea: reference Drewry/Xeneta.
-- Output ONLY the range — no extra text. Let the range be between lower price and lower price + less then 100 USD
+- For 'Air':
+  - Budget consolidated air freight (airport-to-airport, forwarders): lower price, 5-12 days
+  - Premium express (FedEx/UPS/DHL door-to-door): higher price, 1-5 days
+- Chargeable weight: max(actual kg, (L×W×H cm)/5000–6000) if dimensions given
+- Include 2026 fuel surcharges (20-35%), handling fees, market indexes
+- For sea: reference Drewry/Xeneta, 25-55 days
+- Output ONLY the two lines below — no extra text
 
 ### OUTPUT
 $[Low Estimate (budget)] - $[High Estimate (premium)] 
+[low days]-[high days] days
 
 Recommended price range:"""
 
     try:
         # FIX: The messages list must be INSIDE the create() parentheses
+        # response = client.chat.completions.create(
+        #     model=model,
+        #     reasoning_effort=reasoning_effort,
+        #     messages=[
+        #         {"role": "system", "content": "You output ONLY one price range: $10-$20, $20-$30, etc. — nothing else."},
+        #         {"role": "user", "content": prompt}
+        #     ]
+        # )
         response = client.chat.completions.create(
-            model=model,
-            reasoning_effort=reasoning_effort,
-            messages=[
-                {"role": "system", "content": "You output ONLY one price range: $10-$20, $20-$30, etc. — nothing else."},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        
+        model=model,
+        reasoning_effort=reasoning_effort,
+        messages=[
+            # Remove or comment this line — it's forcing single-line price only
+            # {"role": "system", "content": "You output ONLY one price range: $10-$20, $20-$30, etc. — nothing else."},
+            
+            {"role": "system", "content": "You are a helpful logistics expert. Follow the output format exactly as instructed in the user message."},  # Optional safe replacement
+            
+            {"role": "user", "content": prompt}
+        ]
+)
+
         prediction = response.choices[0].message.content.strip().upper()
         return prediction
 
